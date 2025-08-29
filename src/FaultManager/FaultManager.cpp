@@ -13,6 +13,7 @@
  ******************************************************************************/
 #include "GlobalConfig.h"
 #include "FaultManager.h"
+#include "FaultManagerImport.h"
 
 /******************************************************************************
  *   DEFINES AND MACROS
@@ -39,6 +40,9 @@ typedef struct
 /******************************************************************************
  *   LOCAL VARIABLES AND CONSTANTS
  ******************************************************************************/
+#if SAVE_FAULTS_IN_FM == TRUE
+static st_fault_freeze_frame_t st_fault_freeze_frames[MAX_NUM_FREEZE_FRAMES_IN_RAM];
+#endif
 static uint8_t globalFaultCode = 0;
 static st_fault_generic_t ast_fault_array[NUM_OF_FAULT_CODES];
 
@@ -129,6 +133,70 @@ static void fault_decrement (e_fault_code_t e_fc)
     }
 }
 
+#if SAVE_FAULTS_IN_FM == TRUE
+/******************************************************************************
+* Name           :   fault_collect_freeze_frame
+* Parameters     :
+* 	e_fc:			fault code value (enum)    	fault code
+* 	Physical properties:
+* 	e_fc				Phys: 0..e_fc_end; Off: -; Res: 1; Unit: -
+* Return code    :   none
+* Description    :   collect freeze data if the fault code is NOT 0.
+******************************************************************************/
+static void fault_collect_freeze_frame(e_fault_code_t e_fc)
+{
+    uint8_t  u8_i;
+    bool b_exit = FALSE;
+
+    // Check if fault that shall be stored in fault memory exists
+    if ((uint8_t)ast_fault_array[e_fc].st_fault.e_fc < e_fc_end)
+    {
+        // Find a free freeze frame slot. Do no create double entries
+        for(u8_i = 0; (u8_i < MAX_NUM_FREEZE_FRAMES_IN_RAM) && (!b_exit); u8_i++)
+        {
+            // Freeze frame already stored. Return and do nothing
+            if (st_fault_freeze_frames[u8_i].e_fault_code == e_fc)
+            {
+                b_exit = TRUE;
+            }
+            // Store possible free space
+            else if (st_fault_freeze_frames[u8_i].e_fault_code == e_fc_end)
+            {
+                    b_exit = TRUE;
+                    // Collect freeze frame data
+                    fault_collect_freeze_frame_data(&st_fault_freeze_frames[u8_i], e_fc);
+            }
+        }
+    }
+}
+#endif
+
+#if SAVE_FAULTS_IN_FM == TRUE
+/******************************************************************************
+* Name           :   fault_clear_freeze_frame
+* Parameters     :
+* 	e_fc:			fault code value (enum)    	fault code
+* 	Physical properties:
+* 	e_fc				Phys: 0..e_fc_end; Off: -; Res: 1; Unit: -
+* Return code    :   none
+* Description    :   clear freeze data of the given fault
+******************************************************************************/
+static void fault_clear_freeze_frame(e_fault_code_t e_fc)
+{
+    uint8_t  u8_i;
+    // Find a freeze frame slot assigned to fault.
+    for(u8_i = 0; u8_i < MAX_NUM_FREEZE_FRAMES_IN_RAM; u8_i++)
+    {
+        // Freeze frame already stored. Return and do nothing
+        if (st_fault_freeze_frames[u8_i].e_fault_code == (u8) e_fc)
+        {
+        	st_fault_freeze_frames[u8_i].e_fault_code = e_fc_end;
+            break;
+        }
+    }
+}
+#endif
+
 /******************************************************************************
   *   EXPORTED FUNCTIONS (AS EXTERN IN H-FILES)
  ******************************************************************************/
@@ -157,6 +225,14 @@ void FaultManagerInit()
 	st_tmp_fault.deb_inc = 1;
 	st_tmp_fault.deb_max = 3;
 	fault_init(&st_tmp_fault);
+
+    #if SAVE_FAULTS_IN_FM == TRUE
+    uint8_t u8_i;
+    for(u8_i = 0; u8_i < MAX_NUM_FREEZE_FRAMES_IN_RAM; u8_i++)
+    {
+    	st_fault_freeze_frames[u8_i].e_fault_code = e_fc_end;
+    }
+    #endif
 }
 
 /*-----------------------------------------------------------------------------
@@ -177,6 +253,66 @@ void fault_reset (e_fault_code_t e_fc)
     ast_fault_array[e_fc].deb_cnt     = 0;
     ast_fault_array[e_fc].deb_state    = DEB_STATE_PASS;
 }
+
+#if SAVE_FAULTS_IN_FM == TRUE
+/******************************************************************************
+* Name           :   fault_memory_write_proc
+* Parameters     :   none
+* Return code    :   none
+* Description    :   writes one fault memory entry per call
+******************************************************************************/
+void fault_memory_write_proc(void)
+{
+    u8  u8_i;
+    e_fault_code_t e_curr_fc;
+    bool b_fault_saved = FALSE;
+
+    // Go through all freeze frame slots, write one fault per call of this function
+    for(u8_i = 0; (u8_i < MAX_NUM_FREEZE_FRAMES_IN_RAM) && (!b_fault_saved); u8_i++)
+    {
+    	e_curr_fc = st_fault_freeze_frames[u8_i].e_fault_code;
+    	// Freeze frame already stored. Return and do nothing
+        if (e_curr_fc < e_fc_end )
+        {
+            // Check if there is an unsaved fault
+            if (ast_fault_array[e_curr_fc].deb_state == DEB_STATE_FAIL_UNSAVED)
+            {
+                // Store freeze frame data
+                fault_save(&st_fault_freeze_frames[u8_i]);
+                // Set state machine to saved
+                ast_fault_array[e_curr_fc].deb_state = DEB_STATE_FAIL_SAVED;
+                // Freeze frame is now not needed anymore
+                fault_clear_freeze_frame(e_curr_fc);
+                b_fault_saved = TRUE;
+            }
+            // If a freeze frame is stored in state PASS, the fault was healed just before this write process
+            else if (ast_fault_array[e_curr_fc].deb_state == DEB_STATE_PASS)
+            {
+                // Store freeze frame data
+                fault_save(&st_fault_freeze_frames[u8_i]);
+                // Freeze frame is now not needed anymore
+                fault_clear_freeze_frame(e_curr_fc);
+                b_fault_saved = TRUE;
+            }
+        }
+    }
+}
+#endif
+
+#if SAVE_FAULTS_IN_FM == TRUE
+/******************************************************************************
+* Name           :   b_fault_memory_clear
+* Parameters     :   none
+* Return code    :   returns TRUE if FM clear is successful
+*          			 Physical Properties:
+*          			 b_fault_memory_clear => return  Phys: -;   Off: -; Res: -; Unit: -
+* Description    :   clear the whole fault memory area
+******************************************************************************/
+bool b_fault_memory_clear(void)
+{
+    return b_fault_clear();
+}
+#endif
 
 /*-----------------------------------------------------------------------------
 * Name           :   FaultDebounce

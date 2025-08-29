@@ -66,7 +66,7 @@ void setup()
 	BiosIoInit(); // initialize the BIOS I/O
 	BiosAdcInit(); // initialize the BIOS ADC
 	BiosTimerInit(); // initialize the BIOS timer for the scheduler
-	#if (ENABLE_AVR_DEBUG == FALSE)
+	#if (ENABLE_AVR_DEBUG == FALSE)  // watchdog must only be active, if we do not debug
 	BiosWdtInit(); // initialize watchdog timer
 	#endif
 
@@ -99,6 +99,7 @@ void TimerIsrCallout()
 	scd_high_prio_tasks();
 	scd_low_prio_counter();
 }
+
 /*-----------------------------------------------------------------------------
  *  Endless loop
  -----------------------------------------------------------------------------*/
