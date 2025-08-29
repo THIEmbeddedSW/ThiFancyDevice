@@ -1,0 +1,11 @@
+<diagram program="umletino" version="15.1"><zoom_level>10</zoom_level><element><id>UMLDeployment</id><coordinates><x>60</x><y>350</y><w>480</w><h>50</h></coordinates><panel_attributes>Environment
+</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLDeployment</id><coordinates><x>60</x><y>110</y><w>480</w><h>230</h></coordinates><panel_attributes>Fancy new device</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLGeneric</id><coordinates><x>370</x><y>180</y><w>110</w><h>70</h></coordinates><panel_attributes>symbol=component
+
+LCD display</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLGeneric</id><coordinates><x>370</x><y>260</y><w>110</w><h>60</h></coordinates><panel_attributes>symbol=component
+
+Button panel</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLGeneric</id><coordinates><x>210</x><y>150</y><w>130</w><h>180</h></coordinates><panel_attributes>symbol=component
+
+ECU
+(Arduino Board)</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLGeneric</id><coordinates><x>90</x><y>210</y><w>100</w><h>60</h></coordinates><panel_attributes>symbol=component
+
+T+H Sensor</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLGeneric</id><coordinates><x>360</x><y>150</y><w>130</w><h>180</h></coordinates><panel_attributes>LCD shield</panel_attributes><additional_attributes></additional_attributes></element></diagram>
