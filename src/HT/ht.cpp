@@ -14,6 +14,7 @@
 #include "GlobalConfig.h"
 #include "DHT.h"
 #include "BIOS/Bios.h"
+#include "FaultManager/FaultManager.h"
 
 #include "ht.h"
 
@@ -36,9 +37,11 @@
  ******************************************************************************/
 // Initialize DHT sensor.
 static DHT dht(DHT_PIN, DHTTYPE);
-static float t;
-static float h;
-static float hic;
+static float t, t_prev;
+static float h, h_prev;
+// static float f;
+// static float hif;
+static float hic, hic_prev;
 
 static uint8_t selector;
 
@@ -59,6 +62,7 @@ static uint8_t selector;
 void ht_init()
 {
 	selector = TEMP_CELSIUS;
+	t = t_prev = h = h_prev = hic = hic_prev = 0;
 	dht.begin();
 }
 
@@ -75,33 +79,82 @@ void ht_1s(){
 		case TEMP_CELSIUS:
 			// Read temperature as Celsius (the default)
 			t = dht.readTemperature();
-			if (isnan(t)) selector = DHT_ERROR;
-			else selector = HUMIDITY; // for next cycle
+			if (FaultDebounce(isnan(t),FC_DHT_TEMP))
+			{
+				#if (USE_SERIAL_DEBUG == TRUE)
+				Log.errorln("HT: Error during DHT temperature data reading!!");
+				#endif
+				selector = DHT_ERROR;
+			}
+			else 
+			{
+				// if we have a fault symptom, we stay on previous value, until symptom turns into error
+				if (isnan(t)) t = t_prev; else t_prev = t; 
+				selector = HUMIDITY; // for next cycle
+			}
+			#if (USE_SERIAL_DEBUG == TRUE)
+			Log.noticeln("HT: Temperature debounce state: %d", GetFaultDebounceStatus(FC_DHT_TEMP));
+			Log.noticeln("HT: Temperature debounce cnt  : %d", GetFaultDebounceCount(FC_DHT_TEMP));
+			#endif
 			break;
 
 		case HUMIDITY:
-			h = dht.readHumidity();
-			if (isnan(h)) selector = DHT_ERROR;
-			else selector = HEAT_INDEX; // for next cycle
+			h = dht.readHumidity();  // read humidity
+			// debounce result
+			if (FaultDebounce(isnan(h),FC_DHT_HUM))
+			{
+				#if (USE_SERIAL_DEBUG == TRUE)
+				Log.errorln("HT: Error during DHT humidity data reading!!");
+				#endif
+				selector = DHT_ERROR;
+			}
+			else 
+			{
+				// if we have a fault symptom, we stay on previous value, until symptom turns into error
+				if (isnan(h)) h = h_prev; else h_prev = h; 
+				selector = HEAT_INDEX; // for next cycle
+			}
+			#if (USE_SERIAL_DEBUG == TRUE)
+			Log.noticeln("HT: Humidity debounce state: %d", GetFaultDebounceStatus(FC_DHT_HUM));
+			Log.noticeln("HT: Humidity debounce cnt  : %d", GetFaultDebounceCount(FC_DHT_HUM));
 			break;
+			#endif
 
 		case HEAT_INDEX:
 			// Compute heat index in Celsius (isFahreheit = false)
 			hic = dht.computeHeatIndex(t, h, false);
-			if (isnan(hic)) selector = DHT_ERROR;
-			else selector = TEMP_CELSIUS; // for next cycle
+			if (FaultDebounce(isnan(hic),FC_DHT_HIDX))
+			{
+				#if (USE_SERIAL_DEBUG == TRUE)
+				Log.errorln("HT: Error during DHT humidity index calculation!!");
+				#endif
+				selector = DHT_ERROR;
+			}
+			else 
+			{
+				// if we have a fault symptom, we stay on previous value, until symptom turns into error
+				if (isnan(hic)) hic = hic_prev; else hic_prev = hic; 
+				selector = TEMP_CELSIUS; // for next cycle
+			}
+			#if (USE_SERIAL_DEBUG == TRUE)
+			Log.noticeln("HT: Humidity index debounce state: %d", GetFaultDebounceStatus(FC_DHT_HIDX));
+			Log.noticeln("HT: Humidity index debounce cnt  : %d", GetFaultDebounceCount(FC_DHT_HIDX));
+			#endif
 			break;
 
 		case DHT_ERROR:
 			// error handling tbd
+			#if (USE_SERIAL_DEBUG == TRUE)
+			Log.errorln("HT: Error during DHT data reading!!");
+			#endif
 			selector = TEMP_CELSIUS;
 			break;
 
 		case DHT_ALL:
 			// Read temperature as Celsius (the default)
-			t = dht.readTemperature();
+			t = dht.readTemperature(false, true);
 			// Read humidity
-			h = dht.readHumidity();
+			h = dht.readHumidity(true);
 			// Compute heat index in Celsius (isFahreheit = false)
 			if (isnan(h) || isnan(t)) selector = DHT_ERROR;
 			else
@@ -114,24 +167,33 @@ void ht_1s(){
 			break;
 	}
 
+	#if (USE_SERIAL_DEBUG == TRUE)
+	Log.noticeln("HT: Temperature %F °C Humidity %F %% Heat index %F", t, h, hic);
+	#endif
 }
 
 /*-----------------------------------------------------------------------------
  *  providing the data
  -----------------------------------------------------------------------------*/
-uint8_t HTgetTemperature(float *temperature)
-{
-	if (isnan(t) ) {
-		return ERRCODE_DHT_NO_DATA;
+uint8_t HTgetTemperature(float *temperature){
+	if (GetFaultErrorStatus(FC_DHT_TEMP)) 
+	{
+		#if (USE_SERIAL_DEBUG == TRUE)
+		Log.errorln("HT: No valid temperature from DHT sensor!");
+		#endif
+		return ERRCODE_DHT_FAILED;
 	}
 	*temperature = t;
 	return ERRCODE_NONE;
 }
 
-uint8_t HTgetHumidity(float *humidity)
-{
-	if (isnan(h) ) {
-		return ERRCODE_DHT_NO_DATA;
+uint8_t HTgetHumidity(float *humidity){
+	if (GetFaultErrorStatus(FC_DHT_HUM)) 
+	{
+		#if (USE_SERIAL_DEBUG == TRUE)
+		Log.errorln("HT: No valid humidity from DHT sensor!");
+		#endif
+		return ERRCODE_DHT_FAILED;
 	}
 	*humidity = h;
 	return ERRCODE_NONE;

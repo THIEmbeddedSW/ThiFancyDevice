@@ -13,12 +13,18 @@
  ******************************************************************************/
 #include "GlobalConfig.h"
 
+#if (ENABLE_AVR_DEBUG == TRUE)
+#include "avr8-stub.h"
+#include "app_api.h"
+#endif
+
 #include "BIOS/BiosImport.h"
 #include "BIOS/Bios.h"
 #include "SCHEDULER/SchedulerImport.h"
 #include "SCHEDULER/Scheduler.h"
 #include "UI/UI.h"
 #include "HT/ht.h"
+#include "FaultManager/FaultManager.h"
 
 /******************************************************************************
  *   DEFINES AND MACROS
@@ -27,11 +33,14 @@
 /******************************************************************************
  *   LOCAL VARIABLES AND CONSTANTS
  ******************************************************************************/
+#if (USE_SERIAL_DEBUG == TRUE)
+static uint16_t last_time = 0;
+#endif
 
  /******************************************************************************
  *   EXPORTED VARIABLES AND CONSTANTS (AS EXTERN IN H-FILES)
  ******************************************************************************/
-char programVersion[] = "1.0.0";
+char programVersion[] = "1.1.0";
 /******************************************************************************
 *   PRIVATE FUNCTIONS
 ******************************************************************************/
@@ -43,11 +52,23 @@ char programVersion[] = "1.0.0";
 /********************************************************************/
 // Initialization
 /********************************************************************/
-void setup() {
+#ifndef UNIT_TEST
+void setup() 
+{
+	#if (ENABLE_AVR_DEBUG == TRUE)
+	debug_init(); // initialize the debug interface
+	#endif
+
+	#if (USE_SERIAL_DEBUG == TRUE)
+	BiosSerialInit(); // initialize the BIOS serial communication
+	#endif
 
 	BiosIoInit(); // initialize the BIOS I/O
 	BiosAdcInit(); // initialize the BIOS ADC
 	BiosTimerInit(); // initialize the BIOS timer for the scheduler
+	#if (ENABLE_AVR_DEBUG == FALSE)
+	BiosWdtInit(); // initialize watchdog timer
+	#endif
 
 	UI_init(); // initialize the user interface
 
@@ -55,32 +76,46 @@ void setup() {
 
  	ht_init(); // initialize the humidity and temperature module
 
+	FaultManagerInit();  // initialize fault manager for debouncing and error handling
+
 	// let the system run
 	BiosEnableInterrupts();
 
+	BiosWdtService();  // Service the Watchdog for the 1st time
+
+	#if (USE_SERIAL_DEBUG == TRUE)
+	// Initialize with log level and log output. 
+    Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+	Log.noticeln("=== Welcome to THI Fancy New Device version  %s === ", programVersion);
+	#endif
 }
+#endif
 
 /*-----------------------------------------------------------------------------
  *  Implement Timer ISR Callout
  -----------------------------------------------------------------------------*/
-void TimerIsrCallout(){
+void TimerIsrCallout()
+{
 	scd_high_prio_tasks();
 	scd_low_prio_counter();
 }
 /*-----------------------------------------------------------------------------
  *  Endless loop
  -----------------------------------------------------------------------------*/
+#ifndef UNIT_TEST
 void loop() 
 {
 	scd_low_prio_tasks(); // call the scheduler
 	BiosWdtService();  // Service the Watchdog
 }
+#endif
 
 /*-----------------------------------------------------------------------------
  *  Task 1 - high-prio
  -----------------------------------------------------------------------------*/
 void task_100ms_high_prio()
 {
+	if (GetGlobalFaultStatus() > 0) BiosToggleLed(); // toggle the LED
 }
 
 /*-----------------------------------------------------------------------------
@@ -96,7 +131,7 @@ void task_100ms()
  -----------------------------------------------------------------------------*/
 void task_500ms()
 {
-	BiosToggleLed(); // toggle the LED
+	if (GetGlobalFaultStatus() == 0) BiosToggleLed(); // toggle the LED
 }
 
 /*-----------------------------------------------------------------------------
@@ -104,7 +139,18 @@ void task_500ms()
  -----------------------------------------------------------------------------*/
 void task_1s()
 {
+
+	#if (USE_SERIAL_DEBUG == TRUE)
+	Log.noticeln("Main: System time: %d ms", scd_get_system_time());
+    last_time = scd_get_system_time();
+	#endif
+
 	ht_1s(); // call the humidity & temperature process
+
+	#if (USE_SERIAL_DEBUG == TRUE)
+	Log.noticeln("Main: Time since:  %d ms", scd_time_passed(last_time));
+	#endif
+
 	UI_1s(); // update UI with values
 }
 

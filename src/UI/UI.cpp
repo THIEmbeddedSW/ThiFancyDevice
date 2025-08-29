@@ -15,6 +15,7 @@
 #include "GlobalConfig.h"
 #include "BIOS/Bios.h"
 #include "HT/ht.h"
+#include "FaultManager/FaultManager.h"
 
 #include <ItemBack.h>
 #include <ItemSubMenu.h>
@@ -53,6 +54,7 @@
 static uint8_t btnValue = 0; //Variable to hold current button value
 static uint8_t SplashScreenCounter = 0;
 static uint8_t ScreenIdleCounter = 0;
+static uint8_t ErrorWaitCounter = 0;
 static uint8_t UI_state = 0;
 
 static float temperature = 0.0; // temperature value
@@ -116,6 +118,8 @@ void UI_init()
  -----------------------------------------------------------------------------*/
 void UI_100ms()
 {
+	if (GetGlobalFaultStatus() > 0) UI_state = UI_ERR;
+
 	switch (UI_state)
 	{
 		case UI_SPLASH:
@@ -193,6 +197,27 @@ void UI_100ms()
 			}
 			break;
 
+		case UI_ERR:
+			btnValue = BiosGetBtnValue();  // read out the Button
+
+			if (btnValue != BTN_NONE)  // switch screen on 1st, before accepting any selection
+			{
+				menu.setScreen(mainScreen);
+				menu.show();
+				UI_state = UI_MAIN;
+				ScreenIdleCounter = 0;
+				SetGlobalFaultStatus(ERRCODE_NONE);
+				ErrorWaitCounter = 0;
+			}
+			else // no button clicked
+			{
+				ErrorWaitCounter++;
+				if (ErrorWaitCounter > ERRORWAITDURATION)
+				{
+					FaultManager(ERRCODE_FATAL); // need help
+				}
+			}
+			break;
 	}
 	return;
 }
@@ -229,6 +254,15 @@ void UI_1s()
 			lcd.print(humidity);
 			lcd.print(" %");
 			break;
+
+		case UI_ERR:
+			//lcd.backlight();
+			lcd.clear();
+			lcd.setCursor(1,0);
+			lcd.print("!! Error Code: ");
+			lcd.setCursor(4,1);
+			lcd.print((int)GetGlobalFaultStatus());
+			break;	
 
 		default:
 			break;
