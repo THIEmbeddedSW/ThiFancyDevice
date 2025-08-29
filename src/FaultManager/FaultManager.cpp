@@ -433,6 +433,7 @@ bool FaultDebounce(bool b_symptom, e_fault_code_t e_fc)
             {
                 // Increment debounce counter
                 fault_increment(e_fc);
+				bitSet(globalFaultCode,e_fc);
             }
 
             if (ast_fault_array[e_fc].deb_cnt == 0) 
