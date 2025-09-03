@@ -78,6 +78,29 @@ void test_ht_status(void)
    TEST_ASSERT(h > 0.0 && h <= 90.0); 
 }
 
+void test_HeatMonitor(void)
+{
+   // start below threshold
+   HTsetTemperature(24.0);
+   HeatMonitor();
+   TEST_ASSERT_EQUAL(FALSE, over_threshold);
+
+   // temperature matches threshold
+   HTsetTemperature(30.0);
+   HeatMonitor();
+   TEST_ASSERT_EQUAL(TRUE, over_threshold);
+
+   // temperature below threshold but 
+   HTsetTemperature(29.9);
+   HeatMonitor();
+   TEST_ASSERT_EQUAL(TRUE, over_threshold);
+
+   //
+   HTsetTemperature(29.8);
+   HeatMonitor();
+   TEST_ASSERT_EQUAL(FALSE, over_threshold);   
+}
+
 void setup()
 {
    // NOTE!!! Wait for >2 secs
@@ -92,6 +115,7 @@ void setup()
 void loop()
 {
    RUN_TEST(test_ht_status);
+   RUN_TEST(test_HeatMonitor);
 
    UNITY_END(); // stop unit testing
 }
