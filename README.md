@@ -1,1 +1,1 @@
-demo project for THI embedded SW cours
+demo project for THI embedded SW course
