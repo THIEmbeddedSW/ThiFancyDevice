@@ -1,0 +1,20 @@
+<diagram program="umletino" version="15.1"><zoom_level>10</zoom_level><help_text>Space for diagram notes</help_text><element><id>UMLGeneric</id><coordinates><x>50</x><y>40</y><w>610</w><h>490</h></coordinates><panel_attributes>symbol=component
+FaultDebounce()</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>360</x><y>80</y><w>30</w><h>70</h></coordinates><panel_attributes>lt=&lt;-()
+bg=white</panel_attributes><additional_attributes>10;50;10;10</additional_attributes></element><element><id>UMLState</id><coordinates><x>280</x><y>130</y><w>170</w><h>60</h></coordinates><panel_attributes>DEB_STATE_PASS</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLState</id><coordinates><x>460</x><y>240</y><w>150</w><h>50</h></coordinates><panel_attributes>DEB_STATE_SYM</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>440</x><y>140</y><w>130</w><h>120</h></coordinates><panel_attributes>lt=-&gt;
+symptom</panel_attributes><additional_attributes>10;20;90;20;90;100</additional_attributes></element><element><id>UMLState</id><coordinates><x>80</x><y>240</y><w>160</w><h>50</h></coordinates><panel_attributes>DEB_STATE_NO_SYM</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>440</x><y>280</y><w>190</w><h>130</h></coordinates><panel_attributes>lt=-&gt;
+debounce_ctr 
+        &gt;= 
+debounce_max</panel_attributes><additional_attributes>90;10;90;90;10;90</additional_attributes></element><element><id>UMLState</id><coordinates><x>280</x><y>340</y><w>170</w><h>60</h></coordinates><panel_attributes>DEB_STATE_FAIL_UNSAVED</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>230</x><y>240</y><w>250</w><h>40</h></coordinates><panel_attributes>lt=-&gt;
+no symptom</panel_attributes><additional_attributes>230;20;10;20</additional_attributes></element><element><id>Relation</id><coordinates><x>140</x><y>280</y><w>160</w><h>110</h></coordinates><panel_attributes>lt=-&gt;
+no symptom</panel_attributes><additional_attributes>140;90;20;90;20;10</additional_attributes></element><element><id>Relation</id><coordinates><x>130</x><y>140</y><w>170</w><h>120</h></coordinates><panel_attributes>lt=-&gt;
+no symptom,
+debounce_ctr = 0</panel_attributes><additional_attributes>30;100;30;20;150;20</additional_attributes></element><element><id>UMLState</id><coordinates><x>280</x><y>450</y><w>170</w><h>60</h></coordinates><panel_attributes>DEB_STATE_FAIL_SAVED</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>360</x><y>390</y><w>100</w><h>80</h></coordinates><panel_attributes>lt=-&gt;
+save to NvM</panel_attributes><additional_attributes>10;10;10;60</additional_attributes></element><element><id>Relation</id><coordinates><x>150</x><y>280</y><w>150</w><h>230</h></coordinates><panel_attributes>lt=-&gt;
+no symptom</panel_attributes><additional_attributes>130;210;10;210;10;10</additional_attributes></element><element><id>Relation</id><coordinates><x>360</x><y>180</y><w>120</w><h>180</h></coordinates><panel_attributes>lt=-&gt;
+
+
+
+
+symptom, 
+debounce_ctr &gt;= 
+debounce_max</panel_attributes><additional_attributes>10;10;10;160</additional_attributes></element></diagram>

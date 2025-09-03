@@ -1,0 +1,121 @@
+/******************************************************************************
+ ** COPYRIGHT:           Rudi Bauer
+ ** DESCRIPTION:    	 Main module.
+ ** DATE CREATED:        25.12.2022
+  ******************************************************************************/
+
+/******************************************************************************
+ *  COMPILER SWITCHES
+ ******************************************************************************/
+
+/******************************************************************************
+  *   INCLUDE FILES
+ ******************************************************************************/
+//#include "GlobalConfig.h"
+
+#include <Arduino.h>
+#include <unity.h>
+
+#include "GlobalConfig.h"
+#include "HT/ht.h"
+#include "FaultManager/FaultManager.h"
+#include "UI/UI.h"
+
+/******************************************************************************
+ *   DEFINES AND MACROS
+ ******************************************************************************/
+
+/******************************************************************************
+ *   LOCAL VARIABLES AND CONSTANTS
+ ******************************************************************************/
+
+/******************************************************************************
+ *   EXPORTED VARIABLES AND CONSTANTS (AS EXTERN IN H-FILES)
+ ******************************************************************************/
+extern bool over_threshold;
+
+/******************************************************************************
+*   PRIVATE FUNCTIONS
+******************************************************************************/
+
+/******************************************************************************
+  *   EXPORTED FUNCTIONS (AS EXTERN IN H-FILES)
+ ******************************************************************************/
+extern void HeatMonitor();
+
+/********************************************************************/
+// Initialization
+/********************************************************************/
+
+void setUp(void)
+{
+  // set stuff up here
+}
+
+void tearDown(void)
+{
+  // clean stuff up here
+}
+
+void test_ht_status(void)
+{
+   float t, h;
+   u8 rc;
+
+    // run measurement once
+   ht_500ms();
+   rc = HTgetTemperature(&t);
+   TEST_ASSERT_EQUAL(ERRCODE_NONE, rc);
+   TEST_ASSERT(t >= 0.0 && t <= 50.0);
+   rc = HTgetHumidity(&h);
+   TEST_ASSERT_EQUAL(ERRCODE_NONE, rc);
+   TEST_ASSERT(h == 0); // no measurement yet, hence 0
+
+   //run measurement again
+   ht_500ms();
+   rc = HTgetHumidity(&h);
+   TEST_ASSERT_EQUAL(ERRCODE_NONE, rc);
+   TEST_ASSERT(h > 0.0 && h <= 90.0); 
+}
+
+void test_HeatMonitor(void)
+{
+   // start below threshold
+   HTsetTemperature(24.0);
+   HeatMonitor();
+   TEST_ASSERT_EQUAL(FALSE, over_threshold);
+
+   // temperature matches threshold
+   HTsetTemperature(30.0);
+   HeatMonitor();
+   TEST_ASSERT_EQUAL(TRUE, over_threshold);
+
+   // temperature below threshold but 
+   HTsetTemperature(29.9);
+   HeatMonitor();
+   TEST_ASSERT_EQUAL(TRUE, over_threshold);
+
+   //
+   HTsetTemperature(29.8);
+   HeatMonitor();
+   TEST_ASSERT_EQUAL(FALSE, over_threshold);   
+}
+
+void setup()
+{
+   // NOTE!!! Wait for >2 secs
+   // if board doesn't support software reset via Serial.DTR/RTS
+   delay(2000);
+  
+   ht_init();
+
+   UNITY_BEGIN(); // IMPORTANT LINE!
+}
+
+void loop()
+{
+   RUN_TEST(test_ht_status);
+   RUN_TEST(test_HeatMonitor);
+
+   UNITY_END(); // stop unit testing
+}
