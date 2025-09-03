@@ -27,7 +27,7 @@
 *   EXTERN FUNCTION DECLARATIONS
 ******************************************************************************/
 extern void ht_init(void);
-extern void ht_1s(void);
+extern void ht_500ms(void);
 extern uint8_t HTgetTemperature(float *);
 extern uint8_t HTgetHumidity(float *);
 extern uint8_t HTgetHeatIndex(float *);

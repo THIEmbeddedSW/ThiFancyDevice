@@ -42,6 +42,7 @@
 #define UI_INIT 1
 #define UI_IDLE 2
 #define UI_MAIN 3
+#define UI_HEATALARM 4
 #define UI_ERR 99
 
 #define UI_TIMEMENUCOUNT 3  // number of menu entries
@@ -56,11 +57,13 @@ static uint8_t SplashScreenCounter = 0;
 static uint8_t ScreenIdleCounter = 0;
 static uint8_t ErrorWaitCounter = 0;
 static uint8_t UI_state = 0;
+static uint8_t errorCode = 0;
 
 // data for display of humidity & temperature
 static float value = 0.0; // value from HT component
 static uint8_t ht_delay_cnt = 10;
 static	bool toggle_display_ht = TRUE;
+static bool heat_alarm = false;
 
 // Declare the call back functions
 void callbackResetSystem(void);
@@ -102,7 +105,6 @@ MENU_SCREEN(subMenu1, subItems1,
  -----------------------------------------------------------------------------*/
 static uint8_t UI_display_HT()
 {
-	static uint8_t errorCode = 0;
 
 	if (ht_delay_cnt < UI_HT_DISPLAY_TIME) ht_delay_cnt++;
 	else
@@ -174,6 +176,46 @@ static uint8_t UI_display_HT()
 			}
 		}
 		toggle_display_ht = !toggle_display_ht; // toggle for next time
+	}
+	return errorCode;
+}
+
+/*-----------------------------------------------------------------------------
+ *  display heat alarm
+ -----------------------------------------------------------------------------*/
+static uint8_t UI_display_HeatAlarm()
+{
+
+	if (ht_delay_cnt < UI_HT_DISPLAY_TIME) ht_delay_cnt++;
+	else
+	{
+		errorCode = HTgetTemperature(&value); // get the temperature value
+		if (errorCode > 0) // error occurred
+		{
+			lcd.clear();
+			lcd.setCursor(0,0);
+			lcd.print("!Error code ");
+			lcd.setCursor(12,0);
+			lcd.print(errorCode);
+			lcd.setCursor(0,1);
+			lcd.print("no Temp value");
+			return errorCode;
+		}
+		else
+		{
+			lcd.clear();
+			ht_delay_cnt = 0;
+			if (toggle_display_ht)
+			{
+				lcd.setCursor(0,0);
+				lcd.print("! HEAT ALARM !");
+			}
+			lcd.setCursor(0,1);
+			lcd.print("T : ");
+			lcd.print(value);
+			lcd.print(" \xDF" "C");
+			toggle_display_ht = !toggle_display_ht; // toggle for next time
+		}
 	}
 	return errorCode;
 }
@@ -304,6 +346,28 @@ void UI_100ms()
 				}
 			}
 			break;
+
+		case UI_HEATALARM:
+			btnValue = BiosGetBtnValue();  // read out the Button
+
+			if (btnValue != BTN_NONE)  // switch screen on 1st, before accepting any selection
+			{
+				menu.show();
+				UI_state = UI_MAIN;
+				ScreenIdleCounter = 0;
+			}
+			else
+			{
+				if (UI_display_HeatAlarm()) // error occurred
+				{
+					UI_state = UI_ERR;
+					ErrorWaitCounter = 0;
+				}
+			}
+			break;
+
+		default:
+			break;
 	}
 	return;
 }
@@ -359,4 +423,22 @@ void callbackInfo()
 	UI_state = UI_SPLASH;
 	menu.hide();
 	UI_SplashScreen();
+}
+
+/*-----------------------------------------------------------------------------
+ *  Heat Alarm On
+ -----------------------------------------------------------------------------*/
+void UI_HeatAlarmOn()
+{
+	heat_alarm = TRUE;
+	UI_state = UI_HEATALARM;
+}
+
+/*-----------------------------------------------------------------------------
+ *  Heat Alarm On
+ -----------------------------------------------------------------------------*/
+void UI_HeatAlarmOff()
+{
+	heat_alarm = FALSE;
+	UI_state = UI_IDLE;
 }

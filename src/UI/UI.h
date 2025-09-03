@@ -33,5 +33,7 @@ extern void UI_1s(void);
 extern void UI_SplashScreen(void);
 extern void UI_ScreenOff(void);
 extern void UI_ScreenOn(void);
+extern void UI_HeatAlarmOn(void);
+extern void UI_HeatAlarmOff(void);
 
 #endif /* UI_H */
