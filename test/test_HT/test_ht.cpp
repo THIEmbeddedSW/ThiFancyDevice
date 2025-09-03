@@ -16,8 +16,10 @@
 #include <Arduino.h>
 #include <unity.h>
 
+#include "GlobalConfig.h"
 #include "HT/ht.h"
 #include "FaultManager/FaultManager.h"
+#include "UI/UI.h"
 
 /******************************************************************************
  *   DEFINES AND MACROS
@@ -30,6 +32,7 @@
 /******************************************************************************
  *   EXPORTED VARIABLES AND CONSTANTS (AS EXTERN IN H-FILES)
  ******************************************************************************/
+extern bool over_threshold;
 
 /******************************************************************************
 *   PRIVATE FUNCTIONS
@@ -38,6 +41,7 @@
 /******************************************************************************
   *   EXPORTED FUNCTIONS (AS EXTERN IN H-FILES)
  ******************************************************************************/
+extern void HeatMonitor();
 
 /********************************************************************/
 // Initialization
@@ -59,7 +63,7 @@ void test_ht_status(void)
    u8 rc;
 
     // run measurement once
-   ht_1s();
+   ht_500ms();
    rc = HTgetTemperature(&t);
    TEST_ASSERT_EQUAL(ERRCODE_NONE, rc);
    TEST_ASSERT(t >= 0.0 && t <= 50.0);
@@ -68,7 +72,7 @@ void test_ht_status(void)
    TEST_ASSERT(h == 0); // no measurement yet, hence 0
 
    //run measurement again
-   ht_1s();
+   ht_500ms();
    rc = HTgetHumidity(&h);
    TEST_ASSERT_EQUAL(ERRCODE_NONE, rc);
    TEST_ASSERT(h > 0.0 && h <= 90.0); 
