@@ -27,16 +27,12 @@
 *   EXTERN FUNCTION DECLARATIONS
 ******************************************************************************/
 extern void ht_init(void);
-extern void ht_500ms(void);
+extern void ht_1s(void);
 extern uint8_t HTgetTemperature(float *);
 extern uint8_t HTgetHumidity(float *);
 extern uint8_t HTgetHeatIndex(float *);
 extern void HTsetTemperature(float);
 extern void HTsetHumidity(float);
 extern void HTsetHeatIndex(float);
-extern void EnableHeatAlarm(bool);
-extern bool IsHeatAlarmEnabled();
-extern void HTgetThreshold(float *);
-extern void HTsetThreshold(float);
 
 #endif /* HT_H */
