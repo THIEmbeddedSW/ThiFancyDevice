@@ -34,5 +34,9 @@ extern uint8_t HTgetHeatIndex(float *);
 extern void HTsetTemperature(float);
 extern void HTsetHumidity(float);
 extern void HTsetHeatIndex(float);
+extern void EnableHeatAlarm(bool);
+extern bool IsHeatAlarmEnabled();
+extern void HTgetThreshold(float *);
+extern void HTsetThreshold(float);
 
 #endif /* HT_H */

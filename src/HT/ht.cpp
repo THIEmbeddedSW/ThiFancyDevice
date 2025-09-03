@@ -45,7 +45,8 @@ static float delta = 0.1;	     // hysteresis
 /******************************************************************************
  *   EXPORTED VARIABLES AND CONSTANTS (AS EXTERN IN H-FILES)
  ******************************************************************************/
-bool over_threshold = false;
+bool over_threshold = FALSE;
+bool heat_alarm_enable = TRUE;
 
 /******************************************************************************
 *   PRIVATE FUNCTIONS
@@ -57,7 +58,7 @@ void HeatMonitor()
 		if (t >= t_threshold) // threshold exceeded
 		{
 			over_threshold = TRUE;
-			UI_HeatAlarmOn();
+			UI_HeatAlarmSet();
 		}
 	}
 	else // we are over the threshold
@@ -65,7 +66,7 @@ void HeatMonitor()
 		if (t < (t_threshold - delta)) // back below threshold - hysteresis
 		{
 			over_threshold = FALSE;
-			UI_HeatAlarmOff();
+			UI_HeatAlarmClear();
 		}
 	}
 }
@@ -112,8 +113,8 @@ void ht_500ms()
 			if (isnan(t)) t = t_prev; else t_prev = t; 
 
 			#if (USE_SERIAL_DEBUG == TRUE)
-			Log.noticeln("HT: Temp debounce state: %d", GetFaultDebounceStatus(FC_DHT_TEMP));
-			Log.noticeln("HT: Temp debounce cnt  : %d", GetFaultDebounceCount(FC_DHT_TEMP));
+//			Log.noticeln("HT: Temp debounce state: %d", GetFaultDebounceStatus(FC_DHT_TEMP));
+//			Log.noticeln("HT: Temp debounce cnt  : %d", GetFaultDebounceCount(FC_DHT_TEMP));
 			#endif
 			break;
 
@@ -166,11 +167,11 @@ void ht_500ms()
 	}
 
 	#if (USE_SERIAL_DEBUG == TRUE)
-	Log.noticeln("HT: Temperature %F °C Humidity %F %% Heat index %F", t, h, hic);
+//	Log.noticeln("HT: Temperature %F °C Humidity %F %% Heat index %F", t, h, hic);
 	#endif
 
 	// in case no error occurred, we can do the heat monitor function
-	if (selector != DHT_ERROR) HeatMonitor();
+	if ((selector != DHT_ERROR) && heat_alarm_enable) HeatMonitor();
 }
 
 /*-----------------------------------------------------------------------------
@@ -214,19 +215,60 @@ uint8_t HTgetHeatIndex(float *heat_index)
 }
 
 /*-----------------------------------------------------------------------------
- *  setting the data (for test purposes)
+ *  setting Temperature (for test purposes)
  -----------------------------------------------------------------------------*/
 void HTsetTemperature(float temperature)
 {
 	t = temperature;
 }
 
+/*-----------------------------------------------------------------------------
+ *  setting Humidity (for test purposes)
+ -----------------------------------------------------------------------------*/
 void HTsetHumidity(float humidity)
 {
 	h = humidity;
 }
 
+/*-----------------------------------------------------------------------------
+ *  setting Heat Index (for test purposes)
+ -----------------------------------------------------------------------------*/
 void HTsetHeatIndex(float heat_index)
 {
 	hic = heat_index;
 }
+
+/*-----------------------------------------------------------------------------
+ *  interface to enable/disable heat alarm
+ -----------------------------------------------------------------------------*/
+void EnableHeatAlarm(bool enable)
+{
+	heat_alarm_enable = enable;
+	if (!enable) over_threshold = FALSE; // if disabled, clear any alarm
+}
+
+/*-----------------------------------------------------------------------------
+ *  interface to check, if heat alarm is enabled
+ -----------------------------------------------------------------------------*/
+bool IsHeatAlarmEnabled(void)
+{
+	return heat_alarm_enable;
+}
+
+/*-----------------------------------------------------------------------------
+ *  interface to set threshold value
+ -----------------------------------------------------------------------------*/
+void HTsetThreshold(float threshold)
+{
+	t_threshold = threshold;
+}
+
+/*-----------------------------------------------------------------------------
+ *  interface to get threshold value
+ -----------------------------------------------------------------------------*/
+void HTgetThreshold(float *threshold)
+{
+	*threshold = t_threshold;
+}
+
+

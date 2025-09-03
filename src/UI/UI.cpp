@@ -43,11 +43,14 @@
 #define UI_IDLE 2
 #define UI_MAIN 3
 #define UI_HEATALARM 4
+#define UI_SETHEATALARM 5
 #define UI_ERR 99
 
 #define UI_TIMEMENUCOUNT 3  // number of menu entries
 #define NC_BTN_CLICKS_ACCEL 5  // after this number of button clicks we accelerate
 #define UI_HT_DISPLAY_TIME 10 // time in units of 100ms to display HT values in idle mode
+
+#define UI_THDMENUCOUNT 2  // number of menu entries for threshold setting
 
 /******************************************************************************
  *   LOCAL VARIABLES AND CONSTANTS
@@ -59,22 +62,37 @@ static uint8_t ErrorWaitCounter = 0;
 static uint8_t UI_state = 0;
 static uint8_t errorCode = 0;
 
+// Several variables to manage the Valve and Switchpoint menues.
+static u8 MenuIndex = 0;    // which line of the menu is selected
+static u8 upPressCount = 0;       // This counter measures the amount of times the user pushes the "up" button.
+static u8 downPressCount = 0;     // This counter measures the amount of times the user pushes the "down" button.
+static u8 enterPressCount = 0;     // This counter measures the amount of times the user pushes the "enter" button.
+static u8 btnIdleCount = 0;
+static u8 toggleValueDisplayCount = 0;
+static bool toggleValueDisplayFlag = FALSE;
+static const u8 ThresholdMenuX[2] = {8, 8};
+static const u8 ThresholdMenuY[2] = {0, 1};
+
 // data for display of humidity & temperature
 static float value = 0.0; // value from HT component
 static uint8_t ht_delay_cnt = 10;
 static	bool toggle_display_ht = TRUE;
 static bool heat_alarm = false;
 
+static bool local_heat_alarm_enable = TRUE;
+static float local_threshold = 0.0; // local copy of threshold value
+
 // Declare the call back functions
 void callbackResetSystem(void);
 void callbackInfo(void);
+void callbackSetHeatAlarm(void);
 
-extern MenuScreen* subMenu1;
+extern MenuScreen* subMenu1; // forward declaration of submenus
 
 // Define main menu
 MENU_SCREEN(mainScreen, mainItems,
     ITEM_SUBMENU("System", subMenu1),
-	ITEM_BASIC("Blink random"));
+	ITEM_COMMAND("Heat Alarm", callbackSetHeatAlarm));
 
 // Create submenu and precise its parent
 MENU_SCREEN(subMenu1, subItems1,
@@ -100,6 +118,35 @@ MENU_SCREEN(subMenu1, subItems1,
 /******************************************************************************
 *   PRIVATE FUNCTIONS
 ******************************************************************************/
+/*-----------------------------------------------------------------------------
+ *  counts up in steps
+ -----------------------------------------------------------------------------*/
+static float countUp_float(float value, float step, float limit)
+{
+	if (upPressCount < NC_BTN_CLICKS_ACCEL) value += 0.1; else value += step;
+    // limit.
+    if (value > limit) value = limit;
+
+    return value;
+}
+
+/*-----------------------------------------------------------------------------
+ *  counts down in steps
+ -----------------------------------------------------------------------------*/
+static float countDown_float(float value, float step, float limit)
+{
+	if (downPressCount > NC_BTN_CLICKS_ACCEL)
+	{
+		if (value > step + limit) value -= step; else value = limit;
+	}
+	else
+	{
+		if (value > limit) value -= 0.1; else value = limit;
+	}
+	return value;
+}
+
+
 /*-----------------------------------------------------------------------------
  *  manage display of humidity and temperature values
  -----------------------------------------------------------------------------*/
@@ -220,6 +267,140 @@ static uint8_t UI_display_HeatAlarm()
 	return errorCode;
 }
 
+/*-----------------------------------------------------------------------------
+ *  Sub menu for Setting/Clearing Heat Alarm
+ -----------------------------------------------------------------------------*/
+static void UI_SetHeatAlarm()
+{
+	//needed for a blinking cursor
+	toggleValueDisplayCount++;
+	if (toggleValueDisplayCount > 3)
+	{
+		toggleValueDisplayCount = 0;
+		toggleValueDisplayFlag ^= 1;
+	}
+
+	// Display enable value first.
+	lcd.setCursor(0, 0);
+	lcd.print("On/Off: ");
+	lcd.setCursor(8,0);
+	// display only, if cursor is not blinking off
+	if ((MenuIndex == 0 && toggleValueDisplayFlag) || MenuIndex != 0) 
+	{
+		if (local_heat_alarm_enable) lcd.print("On "); else lcd.print("Off");
+	}
+	
+	lcd.setCursor(0, 1);
+	lcd.print("Thd   : ");
+	// display only, if cursor is not blinking off
+	if ((MenuIndex == 1 && toggleValueDisplayFlag) || MenuIndex != 1) 
+	{
+		lcd.setCursor(8,1);
+		lcd.print(local_threshold);
+		lcd.print(" \xDF" "C");
+	}
+
+	// manage cursor blinking
+	if (!toggleValueDisplayFlag)
+	{
+		lcd.setCursor(ThresholdMenuX[MenuIndex],ThresholdMenuY[MenuIndex]); //display cursor
+		lcd.print("     ");
+	}
+
+	btnValue = BiosGetBtnValue();  // read out the Button
+
+	switch (btnValue)
+	{
+		case BTN_DOWN: // loop through menue
+			btnIdleCount = 0;
+			MenuIndex++;
+	    	if (MenuIndex > UI_THDMENUCOUNT-1) MenuIndex = 0;
+    		// Both the up and down press counts will be reset to zero when the right button is pushed.
+    		upPressCount = 0;
+    		downPressCount = 0;
+    		enterPressCount = 0;
+    		lcd.clear();
+			break;
+
+		case BTN_UP:
+			btnIdleCount = 0;
+	    	if (MenuIndex < 1) MenuIndex = UI_THDMENUCOUNT-1; else MenuIndex--; // loop through menue
+    		// Both the up and down press counts will be reset to zero when the left button is pushed.
+    		upPressCount = 0;
+    		downPressCount = 0;
+    		enterPressCount = 0;
+    		lcd.clear();
+			break;
+
+		case BTN_RIGHT:
+			btnIdleCount = 0;
+        	upPressCount++;
+        	downPressCount = 0;
+        	enterPressCount = 0;
+        	switch (MenuIndex)
+        	{
+        		case 0:
+					local_heat_alarm_enable = !local_heat_alarm_enable;
+				break;
+        		case 1:
+        			local_threshold = countUp_float(local_threshold, 0.5, 99.0);
+    		    break;
+			}
+			break;
+
+		case BTN_LEFT:
+			btnIdleCount = 0;
+        	downPressCount++;
+        	upPressCount = 0;
+        	enterPressCount = 0;
+        	switch (MenuIndex)
+        	{
+        		case 0:
+					local_heat_alarm_enable = !local_heat_alarm_enable;
+        			break;
+        		case 1:
+        			local_threshold = countDown_float(local_threshold, 0.5, 0.0);
+    		    	break;
+			}
+			break;
+
+		case BTN_ENTER:
+			btnIdleCount = 0;
+        	upPressCount = 0;
+        	downPressCount = 0;
+        	switch (MenuIndex)
+        	{
+        		case 0:
+					EnableHeatAlarm(local_heat_alarm_enable);
+					break;
+        		case 1:
+        			HTsetThreshold(local_threshold);
+    		    	break;
+			}
+			lcd.clear();
+		    menu.process(BACK);
+			ScreenIdleCounter = 0;
+			UI_state = UI_IDLE;
+			break;
+
+		case BTN_NONE:
+        	upPressCount = 0;
+        	downPressCount = 0;
+			btnIdleCount++;
+			if (btnIdleCount > BUTTONIDLEDURATION)
+			{
+				btnIdleCount = 0;
+	    		lcd.clear();
+			    menu.process(BACK);
+				UI_state = UI_IDLE;
+			}
+			break;
+
+		default:
+			break;
+	}
+	return;
+}
 
 /******************************************************************************
   *   EXPORTED FUNCTIONS (AS EXTERN IN H-FILES)
@@ -243,6 +424,9 @@ void UI_init()
  -----------------------------------------------------------------------------*/
 void UI_100ms()
 {
+			#if (USE_SERIAL_DEBUG == TRUE)
+//			Log.noticeln("UI: local threshold: %F  local_heat_alarm_enable: %d", local_threshold, local_heat_alarm_enable);
+			#endif
 	// state machine to decide, what we shall display
 	switch (UI_state)
 	{
@@ -259,6 +443,7 @@ void UI_100ms()
 
 			if (btnValue != BTN_NONE)  // switch screen on 1st, before accepting any selection
 			{
+				menu.refresh();
 				menu.show();
 				UI_state = UI_MAIN;
 				ScreenIdleCounter = 0;
@@ -285,6 +470,7 @@ void UI_100ms()
 			}
 			else // button clicked
 			{
+				menu.show();
 				ScreenIdleCounter = 0;
 				switch (btnValue)
 				{
@@ -325,6 +511,30 @@ void UI_100ms()
 			}
 			break;
 
+		case UI_HEATALARM:
+			btnValue = BiosGetBtnValue();  // read out the Button
+
+			if (btnValue != BTN_NONE)  // switch screen on 1st, before accepting any selection
+			{
+			    menu.setScreen(mainScreen);
+				menu.show();
+				UI_state = UI_MAIN;
+				ScreenIdleCounter = 0;
+			}
+			else
+			{
+				if (UI_display_HeatAlarm()) // error occurred
+				{
+					UI_state = UI_ERR;
+					ErrorWaitCounter = 0;
+				}
+			}
+			break;
+
+		case UI_SETHEATALARM:
+			UI_SetHeatAlarm();
+			break;
+
 		case UI_ERR:
 			btnValue = BiosGetBtnValue();  // read out the Button
 
@@ -343,25 +553,6 @@ void UI_100ms()
 				if (ErrorWaitCounter > ERRORWAITDURATION)
 				{
 					FaultManager(ERRCODE_FATAL); // need help
-				}
-			}
-			break;
-
-		case UI_HEATALARM:
-			btnValue = BiosGetBtnValue();  // read out the Button
-
-			if (btnValue != BTN_NONE)  // switch screen on 1st, before accepting any selection
-			{
-				menu.show();
-				UI_state = UI_MAIN;
-				ScreenIdleCounter = 0;
-			}
-			else
-			{
-				if (UI_display_HeatAlarm()) // error occurred
-				{
-					UI_state = UI_ERR;
-					ErrorWaitCounter = 0;
 				}
 			}
 			break;
@@ -428,7 +619,7 @@ void callbackInfo()
 /*-----------------------------------------------------------------------------
  *  Heat Alarm On
  -----------------------------------------------------------------------------*/
-void UI_HeatAlarmOn()
+void UI_HeatAlarmSet()
 {
 	heat_alarm = TRUE;
 	UI_state = UI_HEATALARM;
@@ -437,8 +628,19 @@ void UI_HeatAlarmOn()
 /*-----------------------------------------------------------------------------
  *  Heat Alarm On
  -----------------------------------------------------------------------------*/
-void UI_HeatAlarmOff()
+void UI_HeatAlarmClear()
 {
 	heat_alarm = FALSE;
 	UI_state = UI_IDLE;
+}
+
+/*-----------------------------------------------------------------------------
+ *  switch on/off heat alarm
+ -----------------------------------------------------------------------------*/
+void callbackSetHeatAlarm()
+{
+	lcd.clear();
+	local_heat_alarm_enable = IsHeatAlarmEnabled();
+	HTgetThreshold(&local_threshold); // get current threshold value
+	UI_state = UI_SETHEATALARM;
 }
