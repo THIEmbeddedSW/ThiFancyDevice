@@ -2,26 +2,128 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "cppbuild",
-			"label": "C/C++: avr-gcc.exe build active file",
-			"command": "C:/Users/Famil/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
-			"args": [
-				"-fdiagnostics-color=always",
-				"-g",
-				"${file}",
-				"-o",
-				"${fileDirname}\\${fileBasenameNoExtension}.exe",
-				"-mmcu=atmega328p",
-				""
-			],
+			"type": "shell",
+			"label": "Cppcheck: Analyze current project",
+			"command": "platformio.exe",
 			"options": {
-				"cwd": "C:/Users/Famil/.platformio/packages/toolchain-atmelavr/bin"
+				"cwd": "${workspaceFolder}"
 			},
-			"problemMatcher": [
-				"$gcc"
+			"args": [
+				"check",
+				"-f${workspaceFolder}/src"
 			],
-			"group": "build",
-			"detail": "compiler: C:/Users/Famil/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe"
+			"problemMatcher": {
+				"owner": "static-analysis",
+				"severity": "warning",
+				"background": {
+					"activeOnStart": true
+				},
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^(?!nofile:)(?!.*\\.vscode[\\\\/]tasks\\.json:)([^\\r\\n]+?):([0-9]+):\\s+(\\[[^\\]]+\\]\\s+.+\\s+\\[[^\\]]+\\])$",
+					"file": 1,
+					"line": 2,
+					"message": 3
+				}
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Cppcheck: Analyze current file",
+			"command": "platformio.exe",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"args": [
+				"check",
+				"-f${file}"
+			],
+			"problemMatcher": {
+				"owner": "static-analysis",
+				"severity": "warning",
+				"background": {
+					"activeOnStart": true
+				},
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^(?!nofile:)(?!.*\\.vscode[\\\\/]tasks\\.json:)([^\\r\\n]+?):([0-9]+):\\s+(\\[[^\\]]+\\]\\s+.+\\s+\\[[^\\]]+\\])$",
+					"file": 1,
+					"line": 2,
+					"message": 3
+				}
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Lizard: Analyze current file",
+			"command": "python.exe",
+			"args": [
+				"-m",
+				"lizard",
+				"${file}"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "new",
+				"echo": true
+			},
+			"problemMatcher": {
+				"owner": "static-analysis",
+				"severity": "info",
+				"background": {
+					"activeOnStart": true
+				},
+				"fileLocation": "absolute",
+				"pattern": {
+					"regexp": "^\\s*([^@]+)@([0-9]+)-[0-9]+@(.+)$",
+					"message": 1,
+					"line": 2,
+					"file": 3
+				}
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Lizard: Analyze current src folder",
+			"command": "python.exe",
+			"args": [
+				"-m",
+				"lizard",
+				"${workspaceFolder}/src"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "new",
+				"echo": true
+			},
+			"problemMatcher": {
+				"owner": "static-analysis",
+				"severity": "info",
+				"background": {
+					"activeOnStart": true
+				},
+				"fileLocation": "absolute",
+				"pattern": {
+					"regexp": "^\\s*([^@]+)@([0-9]+)-[0-9]+@(.+)$",
+					"message": 1,
+					"line": 2,
+					"file": 3
+				}
+			}
 		}
 	]
 }
