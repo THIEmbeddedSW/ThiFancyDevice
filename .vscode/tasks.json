@@ -3,7 +3,7 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"label": "Cppcheck: Analyze current project",
+			"label": "Cppcheck: Analyze current project (./src folder)",
 			"command": "platformio.exe",
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -94,7 +94,7 @@
 		},
 		{
 			"type": "shell",
-			"label": "Lizard: Analyze current src folder",
+			"label": "Lizard: Analyze current project (./src folder)",
 			"command": "python.exe",
 			"args": [
 				"-m",

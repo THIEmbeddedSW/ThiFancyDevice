@@ -57,7 +57,7 @@ typedef struct
 	uint16_t  temperature;
 	uint16_t  humidity;
 	uint16_t  supply_voltage;
-}st_fault_freeze_frame_t;
+}st_fault_freeze_frame_t; // cppcheck-suppress misra-c2012-2.3 ; usage of struct depends on project config
 
 /* Note: Host needs to ensure the freeze frame struct size is correctly defined and memory alignment is considered */
 #define FAULT_FREEZE_FRAME_SIZE                10 	// Struct size in BYTES

@@ -33,9 +33,9 @@
  ******************************************************************************/
 // Initialize DHT sensor.
 static DHT dht(DHT_PIN, DHTTYPE);
-static float t, t_prev;
-static float h, h_prev;
-static float hic, hic_prev;
+static float t, t_prev;     // cppcheck-suppress misra-c2012-12.3 ; comma operator is ok here because of simplicity and readability
+static float h, h_prev;     // cppcheck-suppress misra-c2012-12.3 ; comma operator is ok here because of simplicity and readability
+static float hic, hic_prev; // cppcheck-suppress misra-c2012-12.3 ; comma operator is ok here because of simplicity and readability
 
 static uint8_t selector;
 static float t_threshold = 30.0; // threshold for temperature warning

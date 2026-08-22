@@ -70,7 +70,7 @@ static st_fault_generic_t ast_fault_array[NUM_OF_FAULT_CODES];
 * Description    :   Initialize the fault array with the fault structure parameter
 * 					 With every new fn call for a fault, counter and state are reset
  -----------------------------------------------------------------------------*/
-static void fault_init (st_fault_t* pst_ext_fault)
+static void fault_init (const st_fault_t* pst_ext_fault)
 {
     e_fault_code_t e_fc = pst_ext_fault->e_fc;
     if(e_fc < e_fc_end)
@@ -145,8 +145,8 @@ static void fault_decrement (e_fault_code_t e_fc)
 ******************************************************************************/
 static void fault_collect_freeze_frame(e_fault_code_t e_fc)
 {
-    uint8_t  u8_i;
-    bool b_exit = FALSE;
+    uint8_t  u8_i; // cppcheck-suppress variableScope ; we keep scope to comply with company coding guidelines
+    bool b_exit = FALSE; // cppcheck-suppress variableScope ; we keep scope to comply with company coding guidelines
 
     // Check if fault that shall be stored in fault memory exists
     if ((uint8_t)ast_fault_array[e_fc].st_fault.e_fc < e_fc_end)
@@ -264,7 +264,7 @@ void fault_reset (e_fault_code_t e_fc)
 void fault_memory_write_proc(void)
 {
     u8  u8_i;
-    e_fault_code_t e_curr_fc;
+    e_fault_code_t e_curr_fc; // cppcheck-suppress variableScope ; we keep scope to comply with company coding guidelines
     bool b_fault_saved = FALSE;
 
     // Go through all freeze frame slots, write one fault per call of this function
@@ -504,7 +504,8 @@ void FaultManager(uint8_t FC)
 		Log.fatalln("FM: globalFaultCode: %X", globalFaultCode);
 		Log.fatalln("FM: -|-");
         #endif
-		while(1); // we give up and wait for a watchdog reset
+        // cppcheck-suppress cert-EXP15-C; we give up and wait for a watchdog reset, hence semicolon is ok
+		while(1); 
 	}
 }
 

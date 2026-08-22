@@ -31,7 +31,7 @@ typedef struct
   uint16_t   deb_inc;
   uint16_t   deb_dec;
   uint16_t   deb_max;
-} st_fault_t;
+} st_fault_t; // cppcheck-suppress misra-c2012-2.3 ; usage of struct depends on project config
 
 /******************************************************************************
 *   EXTERN VARIABLES AND CONSTANTS DECLARATIONS
