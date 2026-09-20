@@ -50,6 +50,6 @@
 /******************************************************************************
 *   EXTERN VARIABLES AND CONSTANTS DECLARATIONS
 ******************************************************************************/
-extern char programVersion[];
+extern const char programVersion[];
 
 #endif /* GLOBALCONFIG_H */
